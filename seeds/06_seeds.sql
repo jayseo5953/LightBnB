@@ -16,7 +16,7 @@ INSERT INTO property_reviews (
   2,
   4,
   'Very good'
-),(
+),(;s
   3,
   3,
   3,

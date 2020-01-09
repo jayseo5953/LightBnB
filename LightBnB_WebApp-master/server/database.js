@@ -9,7 +9,6 @@ const pool = new Pool ({
   database: 'lightbnb'
 });
 
-
 /// Users
 
 /**
@@ -18,16 +17,6 @@ const pool = new Pool ({
  * @return {Promise<{}>} A promise to the user.
  */
 const getUserWithEmail = function(email) {
-  // let user;
-  // for (const userId in users) {
-  //   user = users[userId];
-  //   if (user.email.toLowerCase() === email.toLowerCase()) {
-  //     break;
-  //   } else {
-  //     user = null;
-  //   }
-  // }
-  // return Promise.resolve(user);
   return pool
   .query(`
   SELECT * FROM users
@@ -38,6 +27,7 @@ const getUserWithEmail = function(email) {
     }
     return res.rows[0]
   })
+  .catch(err => console.log(err.message));
 }
 
 exports.getUserWithEmail = getUserWithEmail;
@@ -59,6 +49,7 @@ const getUserWithId = function(id) {
     }
     return res.rows[0]
   }) 
+  .catch(err => console.log(err.message));
 }
 exports.getUserWithId = getUserWithId;
 
@@ -80,6 +71,7 @@ const addUser =  function(user) {
   RETURNING *
   `,[user.name,user.email,user.password])
   .then(res=>res.rows[0])
+  .catch(err => console.log(err.message));
 }
 
 exports.addUser = addUser;
@@ -92,7 +84,27 @@ exports.addUser = addUser;
  * @return {Promise<[{}]>} A promise to the reservations.
  */
 const getAllReservations = function(guest_id, limit = 10) {
-  return getAllProperties(null, 2);
+  // return getAllProperties(null, 2);
+  return pool
+    .query(`
+    SELECT properties.*, reservations.*, avg(rating) as average_rating
+    FROM properties
+    JOIN reservations
+    ON properties.id = property_id
+    JOIN property_reviews
+    ON properties.id = property_reviews.property_id
+    WHERE reservations.guest_id = $1 AND end_date < now():: date
+    GROUP BY properties.id,reservations.id
+    ORDER BY start_date DESC
+    LIMIT $2
+    `,[guest_id, limit])
+    .then(res => {
+      if (res.rows.length === 0) {
+        return null;
+      }
+      return res.rows
+    })
+    .catch(err => console.log(err.message));
 }
 exports.getAllReservations = getAllReservations;
 
@@ -113,7 +125,7 @@ const getAllProperties = function(options, limit = 10) {
     SELECT * FROM properties
     LIMIT $1
     `,[limit])
-    .then( (res) => res.rows);
+    .then(res => res.rows)
 }
 
 exports.getAllProperties = getAllProperties;
